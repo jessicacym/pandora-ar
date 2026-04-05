@@ -30,7 +30,7 @@
     #debug {
       position: fixed; top: 5px; right: 5px; color: #0f0; font: 10px monospace;
       background: rgba(0,0,0,0.7); padding: 5px; border-radius: 4px; z-index: 200;
-      max-width: 200px; pointer-events: none;
+      max-width: 220px; pointer-events: none;
     }
   </style>
 
@@ -38,54 +38,79 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <script>
-    // Force all materials to MeshBasicMaterial (unlit) - fixes iOS Safari white texture issue
-    // Also retries conversion after a delay to handle async texture decoding on iOS
-    AFRAME.registerComponent('force-unlit', {
+    // Remove ceiling/roof + enable clipping to match Unity's open-top view
+    // Keep original PBR materials for proper dark lighting like Unity
+    AFRAME.registerComponent('unity-look', {
       init: function () {
         const el = this.el;
         el.addEventListener('model-loaded', () => {
-          // Convert immediately
-          this.convertMaterials('immediate');
-          // Also retry after delays for iOS async texture decoding
-          setTimeout(() => this.convertMaterials('retry-500ms'), 500);
-          setTimeout(() => this.convertMaterials('retry-2s'), 2000);
+          this.processModel('init');
+          setTimeout(() => this.processModel('retry'), 1000);
         });
       },
-      convertMaterials: function (tag) {
+      processModel: function (tag) {
         const mesh = this.el.getObject3D('mesh');
         if (!mesh) return;
         const THREE = AFRAME.THREE;
-        let converted = 0, textured = 0;
+        let converted = 0, textured = 0, hidden = 0;
+
+        // Clipping plane: cut geometry above Y=17 (remove ceiling from walls that extend to roof)
+        const clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 17);
+        const ceilKeys = ['ceiling', 'ceil', 'roof'];
+
         mesh.traverse((child) => {
           if (child.isMesh && child.material) {
-            const oldMat = child.material;
-            // Always create fresh MeshBasicMaterial
-            const newMat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
+            const matName = (child.material.name || '').toLowerCase();
 
-            // Try to get texture from either old material's map or baseColorTexture
-            const tex = oldMat.map || (oldMat.baseColorTexture ? oldMat.baseColorTexture : null);
-            if (tex) {
-              newMat.map = tex;
-              // Force sRGB color space for correct color rendering
-              if (newMat.map.colorSpace !== undefined) {
-                newMat.map.colorSpace = THREE.SRGBColorSpace;
-              } else if (newMat.map.encoding !== undefined) {
-                newMat.map.encoding = THREE.sRGBEncoding;
-              }
-              newMat.map.needsUpdate = true;
-              textured++;
-            } else {
-              // Use diffuse color fallback
-              newMat.color = oldMat.color ? oldMat.color.clone() : new THREE.Color(0.8, 0.8, 0.8);
+            // Hide ceiling/roof by material name
+            if (ceilKeys.some(c => matName.includes(c))) {
+              child.visible = false;
+              hidden++;
+              return;
             }
-            child.material = newMat;
-            child.material.needsUpdate = true;
+
+            // Hide meshes entirely above Y=17
+            if (child.geometry && child.geometry.attributes.position) {
+              const pos = child.geometry.attributes.position;
+              let minY = Infinity;
+              for (let i = 0; i < pos.count; i++) {
+                if (pos.getY(i) < minY) minY = pos.getY(i);
+              }
+              if (minY >= 17) { child.visible = false; hidden++; return; }
+            }
+
+            // Keep original PBR material but add clipping + fix for iOS
+            const mat = child.material;
+            mat.side = THREE.DoubleSide;
+            mat.clippingPlanes = [clipPlane];
+            mat.clipShadows = true;
+
+            // Make glass materials semi-transparent
+            if (matName.includes('glass')) {
+              mat.transparent = true;
+              mat.opacity = 0.3;
+            }
+
+            // Ensure texture colorSpace is correct
+            if (mat.map) {
+              if (mat.map.colorSpace !== undefined) {
+                mat.map.colorSpace = THREE.SRGBColorSpace;
+              }
+              mat.map.needsUpdate = true;
+              textured++;
+            }
+
+            mat.needsUpdate = true;
             converted++;
           }
         });
+
+        // Enable clipping on renderer
+        const renderer = document.querySelector('a-scene').renderer;
+        if (renderer) renderer.localClippingEnabled = true;
+
         const dbg = document.getElementById('debug');
-        if (dbg) dbg.textContent = tag + ': ' + textured + '/' + converted + ' textured';
-        console.log('[force-unlit ' + tag + '] converted=' + converted + ' textured=' + textured);
+        if (dbg) dbg.textContent = tag + ': ' + textured + '/' + converted + ' tex, ' + hidden + ' ceil';
       }
     });
   </script>
@@ -105,21 +130,26 @@
   <a-scene
     mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 1000; missTolerance: 5; warmupTolerance: 5;"
     color-space="sRGB"
-    renderer="colorManagement: true;"
+    renderer="colorManagement: true; physicallyCorrectLights: true;"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false"
     loading-screen="enabled: false"
   >
+    <!-- Dark lighting to match Unity indoor scene -->
+    <a-entity light="type: ambient; color: #c0c5c0; intensity: 0.4;"></a-entity>
+    <a-entity light="type: directional; color: #ffffff; intensity: 0.5;" position="0 10 5"></a-entity>
+    <a-entity light="type: directional; color: #ffffff; intensity: 0.2;" position="-5 8 -3"></a-entity>
+
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0">
       <a-entity
         id="corridor-model"
-        gltf-model="url(./classroom.gltf?v=12)"
+        gltf-model="url(./classroom.gltf?v=16)"
         position="0 0.3 0"
         rotation="-20 30 0"
         scale="0.016 0.016 0.016"
-        force-unlit
+        unity-look
         animation="property: rotation; to: -20 390 0; loop: true; dur: 30000; easing: linear;"
       ></a-entity>
     </a-entity>
@@ -136,22 +166,13 @@
       hint.style.opacity = '1';
     });
 
-    model.addEventListener('model-loaded', (e) => {
-      console.log('Model loaded');
-    });
-
     model.addEventListener('model-error', (e) => {
-      console.error('Model error:', e.detail);
       document.getElementById('debug').textContent = 'MODEL ERROR';
     });
 
     const target = document.querySelector('[mindar-image-target]');
-    target.addEventListener('targetFound', () => {
-      hint.style.opacity = '0';
-    });
-    target.addEventListener('targetLost', () => {
-      hint.style.opacity = '1';
-    });
+    target.addEventListener('targetFound', () => { hint.style.opacity = '0'; });
+    target.addEventListener('targetLost', () => { hint.style.opacity = '1'; });
   </script>
 
 </body>
