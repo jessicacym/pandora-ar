@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>Pandora.Protocol - AR Experience</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #loading {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #000; color: #fff; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; z-index: 9999;
+      font-family: Arial, sans-serif;
+    }
+    #loading h1 { font-size: 24px; margin-bottom: 10px; }
+    #loading p { font-size: 14px; color: #aaa; margin: 5px 0; }
+    .spinner {
+      width: 40px; height: 40px; border: 3px solid #333;
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin 1s linear infinite; margin-bottom: 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #scanning-hint {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.7); color: #fff; padding: 12px 24px;
+      border-radius: 25px; font-family: Arial, sans-serif; font-size: 14px;
+      z-index: 100; text-align: center; pointer-events: none;
+      transition: opacity 0.5s;
+    }
+  </style>
+
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <!-- MindAR Image Tracking -->
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+</head>
+<body>
+
+  <!-- Loading screen -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <h1>Pandora.Protocol</h1>
+    <p>Loading AR Experience...</p>
+    <p style="font-size:12px; margin-top:15px;">Please allow camera access when prompted</p>
+  </div>
+
+  <!-- Scanning hint -->
+  <div id="scanning-hint" style="opacity:0;">
+    Point your camera at the QR code marker
+  </div>
+
+  <!-- A-Frame AR Scene -->
+  <a-scene
+    mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.001; filterBeta: 1000;"
+    color-space="sRGB"
+    renderer="colorManagement: true; physicallyCorrectLights: true;"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+  >
+    <!-- Camera -->
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <!-- AR Target: when QR code is detected, show 3D content -->
+    <a-entity mindar-image-target="targetIndex: 0">
+
+      <!-- 3D Classroom Model -->
+      <a-gltf-model
+        src="./classroom.glb"
+        position="0 0 0"
+        rotation="-90 0 0"
+        scale="0.05 0.05 0.05"
+        animation="property: rotation; to: -90 360 0; loop: true; dur: 30000; easing: linear;"
+      ></a-gltf-model>
+
+      <!-- Floating text label -->
+      <a-text
+        value="PANDORA.PROTOCOL"
+        align="center"
+        position="0 0.6 0"
+        scale="0.5 0.5 0.5"
+        color="#00ffcc"
+        font="mozillavr"
+      ></a-text>
+
+      <!-- Glowing ring effect -->
+      <a-ring
+        color="#00ffcc"
+        inner-radius="0.3"
+        outer-radius="0.35"
+        position="0 0 0"
+        rotation="-90 0 0"
+        opacity="0.6"
+        animation="property: scale; from: 0.8 0.8 0.8; to: 1.2 1.2 1.2; loop: true; dur: 2000; dir: alternate; easing: easeInOutSine;"
+      ></a-ring>
+
+      <!-- Particle-like dots -->
+      <a-sphere color="#00ffcc" radius="0.02" position="0.3 0.2 0.1" opacity="0.8"
+        animation="property: position; to: -0.3 0.4 -0.1; loop: true; dur: 3000; dir: alternate;"></a-sphere>
+      <a-sphere color="#00ccff" radius="0.015" position="-0.2 0.3 0.05" opacity="0.7"
+        animation="property: position; to: 0.2 0.1 0.15; loop: true; dur: 2500; dir: alternate;"></a-sphere>
+      <a-sphere color="#ff00cc" radius="0.018" position="0.1 0.15 -0.1" opacity="0.6"
+        animation="property: position; to: -0.1 0.45 0.1; loop: true; dur: 3500; dir: alternate;"></a-sphere>
+
+    </a-entity>
+  </a-scene>
+
+  <script>
+    // Hide loading screen when AR is ready
+    const scene = document.querySelector('a-scene');
+    const loading = document.getElementById('loading');
+    const hint = document.getElementById('scanning-hint');
+
+    scene.addEventListener('arReady', () => {
+      loading.style.display = 'none';
+      hint.style.opacity = '1';
+    });
+
+    // Hide hint when target is found
+    const target = document.querySelector('[mindar-image-target]');
+    target.addEventListener('targetFound', () => {
+      hint.style.opacity = '0';
+    });
+    target.addEventListener('targetLost', () => {
+      hint.style.opacity = '1';
+    });
+  </script>
+
+</body>
+</html>
