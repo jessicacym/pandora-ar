@@ -65,7 +65,7 @@
     device-orientation-permission-ui="enabled: false"
   >
     <a-assets>
-      <a-asset-item id="classroom-model" src="./classroom.glb"></a-asset-item>
+      <a-asset-item id="classroom-model" src="./classroom.glb?v=5"></a-asset-item>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -80,10 +80,10 @@
       <!-- 3D School Corridor Model -->
       <a-gltf-model
         src="#classroom-model"
-        position="0 0.15 0"
-        rotation="-30 30 0"
-        scale="0.0004 0.0004 0.0004"
-        animation="property: rotation; to: -30 390 0; loop: true; dur: 30000; easing: linear;"
+        position="0 0.1 0"
+        rotation="-20 30 0"
+        scale="0.002 0.002 0.002"
+        animation="property: rotation; to: -20 390 0; loop: true; dur: 30000; easing: linear;"
       ></a-gltf-model>
 
       <!-- PANDORA.PROTOCOL title -->
