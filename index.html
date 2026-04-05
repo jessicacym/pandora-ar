@@ -27,42 +27,65 @@
       z-index: 100; text-align: center; pointer-events: none;
       border: 1px solid #00aa88; transition: opacity 0.5s; opacity: 0;
     }
-    #container { width: 100vw; height: 100vh; position: relative; }
+    #debug {
+      position: fixed; top: 5px; right: 5px; color: #0f0; font: 10px monospace;
+      background: rgba(0,0,0,0.7); padding: 5px; border-radius: 4px; z-index: 200;
+      max-width: 200px; pointer-events: none;
+    }
   </style>
 
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <script>
-    // Custom component: force all mesh materials to MeshBasicMaterial (unlit)
-    // This guarantees textures show at full color regardless of lighting on ANY device
+    // Force all materials to MeshBasicMaterial (unlit) - fixes iOS Safari white texture issue
+    // Also retries conversion after a delay to handle async texture decoding on iOS
     AFRAME.registerComponent('force-unlit', {
       init: function () {
-        this.el.addEventListener('model-loaded', () => {
-          const mesh = this.el.getObject3D('mesh');
-          if (!mesh) return;
-          const THREE = AFRAME.THREE;
-          mesh.traverse((child) => {
-            if (child.isMesh && child.material) {
-              const oldMat = child.material;
-              // Create unlit material preserving the texture
-              const newMat = new THREE.MeshBasicMaterial({
-                side: THREE.DoubleSide
-              });
-              // Copy texture if exists
-              if (oldMat.map) {
-                newMat.map = oldMat.map;
-                newMat.map.colorSpace = THREE.SRGBColorSpace;
-              } else {
-                // No texture - use the diffuse color
-                newMat.color = oldMat.color ? oldMat.color.clone() : new THREE.Color(0.8, 0.8, 0.8);
-              }
-              child.material = newMat;
-              child.material.needsUpdate = true;
-            }
-          });
-          console.log('All materials converted to unlit (MeshBasicMaterial)');
+        const el = this.el;
+        el.addEventListener('model-loaded', () => {
+          // Convert immediately
+          this.convertMaterials('immediate');
+          // Also retry after delays for iOS async texture decoding
+          setTimeout(() => this.convertMaterials('retry-500ms'), 500);
+          setTimeout(() => this.convertMaterials('retry-2s'), 2000);
         });
+      },
+      convertMaterials: function (tag) {
+        const mesh = this.el.getObject3D('mesh');
+        if (!mesh) return;
+        const THREE = AFRAME.THREE;
+        let converted = 0, textured = 0;
+        mesh.traverse((child) => {
+          if (child.isMesh && child.material) {
+            const oldMat = child.material;
+            // Always create fresh MeshBasicMaterial
+            const newMat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
+
+            // Try to get texture from either old material's map or baseColorTexture
+            const tex = oldMat.map || (oldMat.baseColorTexture ? oldMat.baseColorTexture : null);
+            if (tex) {
+              newMat.map = tex;
+              // Force sRGB color space for correct color rendering
+              if (newMat.map.colorSpace !== undefined) {
+                newMat.map.colorSpace = THREE.SRGBColorSpace;
+              } else if (newMat.map.encoding !== undefined) {
+                newMat.map.encoding = THREE.sRGBEncoding;
+              }
+              newMat.map.needsUpdate = true;
+              textured++;
+            } else {
+              // Use diffuse color fallback
+              newMat.color = oldMat.color ? oldMat.color.clone() : new THREE.Color(0.8, 0.8, 0.8);
+            }
+            child.material = newMat;
+            child.material.needsUpdate = true;
+            converted++;
+          }
+        });
+        const dbg = document.getElementById('debug');
+        if (dbg) dbg.textContent = tag + ': ' + textured + '/' + converted + ' textured';
+        console.log('[force-unlit ' + tag + '] converted=' + converted + ' textured=' + textured);
       }
     });
   </script>
@@ -77,6 +100,7 @@
   </div>
 
   <div id="hint">Point camera at QR marker</div>
+  <div id="debug">loading...</div>
 
   <a-scene
     mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 1000; missTolerance: 5; warmupTolerance: 5;"
@@ -91,10 +115,10 @@
     <a-entity mindar-image-target="targetIndex: 0">
       <a-entity
         id="corridor-model"
-        gltf-model="url(./classroom.glb?v=11)"
-        position="0 0.2 0"
+        gltf-model="url(./classroom.gltf?v=12)"
+        position="0 0.3 0"
         rotation="-20 30 0"
-        scale="0.008 0.008 0.008"
+        scale="0.016 0.016 0.016"
         force-unlit
         animation="property: rotation; to: -20 390 0; loop: true; dur: 30000; easing: linear;"
       ></a-entity>
@@ -113,24 +137,12 @@
     });
 
     model.addEventListener('model-loaded', (e) => {
-      console.log('Model loaded successfully');
-      const mesh = model.getObject3D('mesh');
-      if (mesh) {
-        let meshCount = 0, texturedCount = 0;
-        mesh.traverse((child) => {
-          if (child.isMesh) {
-            meshCount++;
-            if (child.material && child.material.map) {
-              texturedCount++;
-            }
-          }
-        });
-        console.log('Total meshes:', meshCount, 'Textured:', texturedCount);
-      }
+      console.log('Model loaded');
     });
 
     model.addEventListener('model-error', (e) => {
-      console.error('Model load error:', e.detail);
+      console.error('Model error:', e.detail);
+      document.getElementById('debug').textContent = 'MODEL ERROR';
     });
 
     const target = document.querySelector('[mindar-image-target]');
