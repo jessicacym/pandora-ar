@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-  <title>Pandora.Protocol - AR Experience</title>
+  <title>Pandora.Protocol - AR</title>
   <style>
-    body { margin: 0; overflow: hidden; }
+    body { margin: 0; overflow: hidden; background: #000; }
     #loading {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: #0a0a1a; color: #00ffcc; display: flex; flex-direction: column;
@@ -20,22 +20,17 @@
       animation: spin 1s linear infinite; margin-bottom: 20px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    #scanning-hint {
-      position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+    #hint {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
       background: rgba(0,20,15,0.85); color: #00ffcc; padding: 14px 28px;
       border-radius: 25px; font-family: 'Courier New', monospace; font-size: 14px;
       z-index: 100; text-align: center; pointer-events: none;
-      transition: opacity 0.5s; border: 1px solid #00aa88;
+      border: 1px solid #00aa88; transition: opacity 0.5s; opacity: 0;
     }
-    #found-hint {
-      position: fixed; top: 40px; left: 50%; transform: translateX(-50%);
-      background: rgba(0,20,15,0.85); color: #00ffcc; padding: 10px 24px;
-      border-radius: 20px; font-family: 'Courier New', monospace; font-size: 12px;
-      z-index: 100; text-align: center; pointer-events: none;
-      opacity: 0; transition: opacity 0.5s; border: 1px solid #00ffcc;
-    }
+    #container { width: 100vw; height: 100vh; position: relative; }
   </style>
 
+  <!-- Use A-Frame + MindAR A-Frame (proven working on iOS) -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 </head>
@@ -45,17 +40,10 @@
     <div class="spinner"></div>
     <h1>PANDORA</h1>
     <p>P R O T O C O L</p>
-    <p style="margin-top:15px; color:#006644;">Initializing AR system...</p>
-    <p style="font-size:11px; color:#004433; margin-top:10px;">Allow camera access when prompted</p>
+    <p style="margin-top:15px; color:#006644;">Initializing AR...</p>
   </div>
 
-  <div id="scanning-hint" style="opacity:0;">
-    Point camera at the Pandora marker
-  </div>
-
-  <div id="found-hint">
-    // SYSTEM CONNECTED //
-  </div>
+  <div id="hint">Point camera at QR marker</div>
 
   <a-scene
     mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 1000; missTolerance: 5; warmupTolerance: 5;"
@@ -63,84 +51,67 @@
     renderer="colorManagement: true;"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false"
+    loading-screen="enabled: false"
   >
-    <a-assets>
-      <a-asset-item id="classroom-model" src="./classroom.glb?v=5"></a-asset-item>
-    </a-assets>
-
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- Lighting for the model -->
-    <a-entity light="type: ambient; color: #ffffff; intensity: 1.2;"></a-entity>
-    <a-entity light="type: directional; color: #ffffff; intensity: 0.8;" position="1 2 1"></a-entity>
-    <a-entity light="type: directional; color: #ffffff; intensity: 0.4;" position="-1 1 -1"></a-entity>
+    <!-- Lighting - dimmer to show textures properly -->
+    <a-entity light="type: ambient; color: #ffffff; intensity: 0.4;"></a-entity>
+    <a-entity light="type: directional; color: #ffffff; intensity: 0.6;" position="1 3 1"></a-entity>
 
     <a-entity mindar-image-target="targetIndex: 0">
-
-      <!-- 3D School Corridor Model -->
-      <a-gltf-model
-        src="#classroom-model"
-        position="0 0.1 0"
+      <!-- Load GLB directly via gltf-model component (no asset preload) -->
+      <a-entity
+        id="corridor-model"
+        gltf-model="url(./classroom.glb?v=10)"
+        position="0 0.15 0"
         rotation="-20 30 0"
         scale="0.002 0.002 0.002"
         animation="property: rotation; to: -20 390 0; loop: true; dur: 30000; easing: linear;"
-      ></a-gltf-model>
-
-      <!-- PANDORA.PROTOCOL title -->
-      <a-text
-        value="PANDORA.PROTOCOL"
-        align="center"
-        position="0 0.7 0"
-        scale="0.4 0.4 0.4"
-        color="#00ffcc"
-        font="mozillavr"
-      ></a-text>
-
-      <!-- Subtitle -->
-      <a-text
-        value="// SYSTEM ACTIVE //"
-        align="center"
-        position="0 -0.1 0"
-        scale="0.25 0.25 0.25"
-        color="#006644"
-        font="mozillavr"
-      ></a-text>
-
-      <!-- Glowing rings -->
-      <a-ring color="#00ffcc" inner-radius="0.35" outer-radius="0.38" position="0 0.3 0" rotation="-90 0 0" opacity="0.5"
-        animation="property: scale; from: 0.8 0.8 0.8; to: 1.3 1.3 1.3; loop: true; dur: 2000; dir: alternate; easing: easeInOutSine;"></a-ring>
-      <a-ring color="#00ccff" inner-radius="0.45" outer-radius="0.47" position="0 0.3 0" rotation="-90 0 0" opacity="0.3"
-        animation="property: scale; from: 1.0 1.0 1.0; to: 0.7 0.7 0.7; loop: true; dur: 2500; dir: alternate; easing: easeInOutSine;"></a-ring>
-
-      <!-- Floating particles -->
-      <a-sphere color="#00ffcc" radius="0.02" position="0.35 0.4 0.1" opacity="0.8"
-        animation="property: position; to: -0.35 0.5 -0.1; loop: true; dur: 3000; dir: alternate;"></a-sphere>
-      <a-sphere color="#00ccff" radius="0.015" position="-0.25 0.5 0.05" opacity="0.7"
-        animation="property: position; to: 0.25 0.2 0.15; loop: true; dur: 2500; dir: alternate;"></a-sphere>
-      <a-sphere color="#ff00cc" radius="0.018" position="0.15 0.25 -0.1" opacity="0.6"
-        animation="property: position; to: -0.15 0.55 0.1; loop: true; dur: 3500; dir: alternate;"></a-sphere>
-      <a-sphere color="#ffcc00" radius="0.012" position="-0.4 0.35 0.0" opacity="0.5"
-        animation="property: position; to: 0.4 0.45 0.05; loop: true; dur: 4000; dir: alternate;"></a-sphere>
-
+      ></a-entity>
     </a-entity>
   </a-scene>
 
   <script>
     const scene = document.querySelector('a-scene');
     const loading = document.getElementById('loading');
-    const hint = document.getElementById('scanning-hint');
-    const foundHint = document.getElementById('found-hint');
+    const hint = document.getElementById('hint');
+    const model = document.getElementById('corridor-model');
 
     scene.addEventListener('arReady', () => {
       loading.style.display = 'none';
       hint.style.opacity = '1';
     });
 
+    // Log model loading for debugging
+    model.addEventListener('model-loaded', (e) => {
+      console.log('Model loaded successfully');
+      const mesh = model.getObject3D('mesh');
+      if (mesh) {
+        let meshCount = 0, texturedCount = 0;
+        mesh.traverse((child) => {
+          if (child.isMesh) {
+            meshCount++;
+            if (child.material && child.material.map) {
+              texturedCount++;
+              console.log('Textured mesh:', child.name || meshCount);
+            } else {
+              console.log('Untextured mesh:', child.name || meshCount,
+                'color:', child.material?.color?.getHexString());
+            }
+          }
+        });
+        console.log('Total meshes:', meshCount, 'Textured:', texturedCount);
+      }
+    });
+
+    model.addEventListener('model-error', (e) => {
+      console.error('Model load error:', e.detail);
+    });
+
     const target = document.querySelector('[mindar-image-target]');
     target.addEventListener('targetFound', () => {
       hint.style.opacity = '0';
-      foundHint.style.opacity = '1';
-      setTimeout(() => { foundHint.style.opacity = '0'; }, 3000);
     });
     target.addEventListener('targetLost', () => {
       hint.style.opacity = '1';
