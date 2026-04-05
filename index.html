@@ -60,7 +60,7 @@
   <a-scene
     mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 1000; missTolerance: 5; warmupTolerance: 5;"
     color-space="sRGB"
-    renderer="colorManagement: true; physicallyCorrectLights: true;"
+    renderer="colorManagement: true;"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false"
   >
@@ -70,15 +70,20 @@
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
+    <!-- Lighting for the model -->
+    <a-entity light="type: ambient; color: #ffffff; intensity: 1.2;"></a-entity>
+    <a-entity light="type: directional; color: #ffffff; intensity: 0.8;" position="1 2 1"></a-entity>
+    <a-entity light="type: directional; color: #ffffff; intensity: 0.4;" position="-1 1 -1"></a-entity>
+
     <a-entity mindar-image-target="targetIndex: 0">
 
       <!-- 3D School Corridor Model -->
       <a-gltf-model
         src="#classroom-model"
-        position="0 0.2 0"
-        rotation="0 30 0"
-        scale="0.06 0.06 0.06"
-        animation="property: rotation; to: 0 360 0; loop: true; dur: 30000; easing: linear;"
+        position="0 0.15 0"
+        rotation="-30 30 0"
+        scale="0.0004 0.0004 0.0004"
+        animation="property: rotation; to: -30 390 0; loop: true; dur: 30000; easing: linear;"
       ></a-gltf-model>
 
       <!-- PANDORA.PROTOCOL title -->
