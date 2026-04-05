@@ -30,9 +30,42 @@
     #container { width: 100vw; height: 100vh; position: relative; }
   </style>
 
-  <!-- Use A-Frame + MindAR A-Frame (proven working on iOS) -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <script>
+    // Custom component: force all mesh materials to MeshBasicMaterial (unlit)
+    // This guarantees textures show at full color regardless of lighting on ANY device
+    AFRAME.registerComponent('force-unlit', {
+      init: function () {
+        this.el.addEventListener('model-loaded', () => {
+          const mesh = this.el.getObject3D('mesh');
+          if (!mesh) return;
+          const THREE = AFRAME.THREE;
+          mesh.traverse((child) => {
+            if (child.isMesh && child.material) {
+              const oldMat = child.material;
+              // Create unlit material preserving the texture
+              const newMat = new THREE.MeshBasicMaterial({
+                side: THREE.DoubleSide
+              });
+              // Copy texture if exists
+              if (oldMat.map) {
+                newMat.map = oldMat.map;
+                newMat.map.colorSpace = THREE.SRGBColorSpace;
+              } else {
+                // No texture - use the diffuse color
+                newMat.color = oldMat.color ? oldMat.color.clone() : new THREE.Color(0.8, 0.8, 0.8);
+              }
+              child.material = newMat;
+              child.material.needsUpdate = true;
+            }
+          });
+          console.log('All materials converted to unlit (MeshBasicMaterial)');
+        });
+      }
+    });
+  </script>
 </head>
 <body>
 
@@ -55,18 +88,14 @@
   >
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- Lighting - dimmer to show textures properly -->
-    <a-entity light="type: ambient; color: #ffffff; intensity: 0.4;"></a-entity>
-    <a-entity light="type: directional; color: #ffffff; intensity: 0.6;" position="1 3 1"></a-entity>
-
     <a-entity mindar-image-target="targetIndex: 0">
-      <!-- Load GLB directly via gltf-model component (no asset preload) -->
       <a-entity
         id="corridor-model"
-        gltf-model="url(./classroom.glb?v=10)"
-        position="0 0.15 0"
+        gltf-model="url(./classroom.glb?v=11)"
+        position="0 0.2 0"
         rotation="-20 30 0"
-        scale="0.002 0.002 0.002"
+        scale="0.008 0.008 0.008"
+        force-unlit
         animation="property: rotation; to: -20 390 0; loop: true; dur: 30000; easing: linear;"
       ></a-entity>
     </a-entity>
@@ -83,7 +112,6 @@
       hint.style.opacity = '1';
     });
 
-    // Log model loading for debugging
     model.addEventListener('model-loaded', (e) => {
       console.log('Model loaded successfully');
       const mesh = model.getObject3D('mesh');
@@ -94,10 +122,6 @@
             meshCount++;
             if (child.material && child.material.map) {
               texturedCount++;
-              console.log('Textured mesh:', child.name || meshCount);
-            } else {
-              console.log('Untextured mesh:', child.name || meshCount,
-                'color:', child.material?.color?.getHexString());
             }
           }
         });
