@@ -82,19 +82,18 @@
               normalMapped++;
             }
 
-            // PBR: darken to match Unity's dark indoor atmosphere
+            // Slight darken to match Unity indoor feel (not too aggressive)
             if (mat.color) {
               const c = mat.color;
-              // Power curve + multiply to create Unity-like dark interior
-              c.r = Math.pow(c.r, 1.8) * 0.55;
-              c.g = Math.pow(c.g, 1.8) * 0.55;
-              c.b = Math.pow(c.b, 1.8) * 0.55;
+              c.r = Math.pow(c.r, 1.2) * 0.85;
+              c.g = Math.pow(c.g, 1.2) * 0.85;
+              c.b = Math.pow(c.b, 1.2) * 0.85;
             }
 
             // Matte indoor surfaces
-            mat.roughness = 0.88;
+            mat.roughness = 0.85;
             mat.metalness = 0.02;
-            mat.envMapIntensity = 0.15;
+            mat.envMapIntensity = 0.3;
 
             mat.needsUpdate = true;
             converted++;
@@ -122,22 +121,22 @@
   <a-scene
     mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 1000; missTolerance: 5; warmupTolerance: 5;"
     color-space="sRGB"
-    renderer="colorManagement: true; physicallyCorrectLights: true; toneMapping: ACESFilmic; toneMappingExposure: 0.8;"
+    renderer="colorManagement: true; physicallyCorrectLights: true; toneMapping: ACESFilmic; toneMappingExposure: 1.2;"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false"
     loading-screen="enabled: false"
   >
-    <!-- Dark indoor lighting to match Unity scene -->
-    <a-entity light="type: ambient; color: #707570; intensity: 0.10;"></a-entity>
-    <a-entity light="type: directional; color: #fff0e0; intensity: 0.8;" position="2 20 3"></a-entity>
-    <a-entity light="type: directional; color: #d0e0f0; intensity: 0.2;" position="-4 15 -3"></a-entity>
+    <!-- Indoor lighting matching Unity -->
+    <a-entity light="type: ambient; color: #b0b5b0; intensity: 0.35;"></a-entity>
+    <a-entity light="type: directional; color: #ffffff; intensity: 0.6;" position="2 15 3"></a-entity>
+    <a-entity light="type: directional; color: #e0e8f0; intensity: 0.25;" position="-4 12 -2"></a-entity>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0">
       <a-entity
         id="corridor-model"
-        gltf-model="url(./classroom.gltf?v=21)"
+        gltf-model="url(./classroom.gltf?v=22)"
         position="0 0.15 0"
         rotation="-30 30 0"
         scale="0.010 0.010 0.010"
