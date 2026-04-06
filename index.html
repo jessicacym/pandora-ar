@@ -38,7 +38,7 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <script>
-    // Match Unity's dark interior look with proper PBR materials
+    // Match Unity's bright indoor look - white/gray walls, blue-gray floors
     AFRAME.registerComponent('unity-look', {
       init: function () {
         const el = this.el;
@@ -60,40 +60,34 @@
 
             mat.side = THREE.DoubleSide;
 
-            // Glass materials
+            // Glass: semi-transparent with slight blue tint like Unity
             if (matName.includes('glass')) {
               mat.transparent = true;
-              mat.opacity = 0.25;
-              mat.color.setHex(0x88aaaa);
+              mat.opacity = 0.3;
+              mat.color.setHex(0xc8dde8);
             }
 
-            // Diffuse texture handling
+            // Diffuse texture
             if (mat.map) {
               mat.map.colorSpace = THREE.SRGBColorSpace;
               mat.map.needsUpdate = true;
               textured++;
             }
 
-            // Normal map handling
+            // Normal map for surface detail
             if (mat.normalMap) {
               mat.normalMap.colorSpace = THREE.NoColorSpace;
-              mat.normalScale.set(1.5, 1.5);
+              mat.normalScale.set(1.0, 1.0);
               mat.normalMap.needsUpdate = true;
               normalMapped++;
             }
 
-            // Slight darken to match Unity indoor feel (not too aggressive)
-            if (mat.color) {
-              const c = mat.color;
-              c.r = Math.pow(c.r, 1.2) * 0.85;
-              c.g = Math.pow(c.g, 1.2) * 0.85;
-              c.b = Math.pow(c.b, 1.2) * 0.85;
-            }
+            // NO color darkening - keep original bright colors from FBX
+            // Unity scene is bright: white walls, blue-gray floors
 
-            // Matte indoor surfaces
-            mat.roughness = 0.85;
-            mat.metalness = 0.02;
-            mat.envMapIntensity = 0.3;
+            // PBR: matte indoor surfaces
+            mat.roughness = 0.75;
+            mat.metalness = 0.0;
 
             mat.needsUpdate = true;
             converted++;
@@ -121,22 +115,22 @@
   <a-scene
     mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 1000; missTolerance: 5; warmupTolerance: 5;"
     color-space="sRGB"
-    renderer="colorManagement: true; physicallyCorrectLights: true; toneMapping: ACESFilmic; toneMappingExposure: 1.2;"
+    renderer="colorManagement: true; physicallyCorrectLights: true;"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false"
     loading-screen="enabled: false"
   >
-    <!-- Indoor lighting matching Unity -->
-    <a-entity light="type: ambient; color: #b0b5b0; intensity: 0.35;"></a-entity>
-    <a-entity light="type: directional; color: #ffffff; intensity: 0.6;" position="2 15 3"></a-entity>
-    <a-entity light="type: directional; color: #e0e8f0; intensity: 0.25;" position="-4 12 -2"></a-entity>
+    <!-- Bright indoor lighting matching Unity's well-lit scene -->
+    <a-entity light="type: ambient; color: #ffffff; intensity: 0.6;"></a-entity>
+    <a-entity light="type: directional; color: #ffffff; intensity: 0.8;" position="3 15 5"></a-entity>
+    <a-entity light="type: directional; color: #e8eef5; intensity: 0.4;" position="-5 10 -3"></a-entity>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0">
       <a-entity
         id="corridor-model"
-        gltf-model="url(./classroom.gltf?v=22)"
+        gltf-model="url(./classroom.gltf?v=23)"
         position="0 0.15 0"
         rotation="-30 30 0"
         scale="0.010 0.010 0.010"
