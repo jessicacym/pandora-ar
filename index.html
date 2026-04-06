@@ -30,6 +30,10 @@
       z-index: 100; text-align: center; pointer-events: none;
       border: 1px solid #00aa88; transition: opacity 0.5s; opacity: 0;
     }
+    #ver {
+      position: fixed; bottom: 10px; right: 10px; color: #00ffcc; font: 10px monospace;
+      z-index: 300; background: rgba(0,0,0,0.8); padding: 3px 6px; border-radius: 3px;
+    }
     .a-enter-vr, .a-orientation-modal, .rs-base, .a-inspector-loader,
     .a-loader-title { display: none !important; }
     a-scene .a-canvas { position: fixed !important; }
@@ -84,6 +88,7 @@
     <p style="margin-top:15px; color:#006644;">Initializing AR...</p>
   </div>
   <div id="hint">Point camera at QR marker</div>
+  <div id="ver">v4</div>
   <a-scene
     mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.0005; filterBeta: 0.01; missTolerance: 50; warmupTolerance: 3;"
     color-space="sRGB"
