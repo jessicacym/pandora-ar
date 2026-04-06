@@ -54,36 +54,14 @@
         const THREE = AFRAME.THREE;
         let converted = 0, textured = 0, hidden = 0;
 
-        // Clipping plane: cut geometry above Y=17 (remove ceiling from walls that extend to roof)
-        const clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 17);
-        const ceilKeys = ['ceiling', 'ceil', 'roof'];
-
+        // Geometry already trimmed at Y=14 in conversion - no clipping planes needed
         mesh.traverse((child) => {
           if (child.isMesh && child.material) {
             const matName = (child.material.name || '').toLowerCase();
 
-            // Hide ceiling/roof by material name
-            if (ceilKeys.some(c => matName.includes(c))) {
-              child.visible = false;
-              hidden++;
-              return;
-            }
-
-            // Hide meshes entirely above Y=17
-            if (child.geometry && child.geometry.attributes.position) {
-              const pos = child.geometry.attributes.position;
-              let minY = Infinity;
-              for (let i = 0; i < pos.count; i++) {
-                if (pos.getY(i) < minY) minY = pos.getY(i);
-              }
-              if (minY >= 17) { child.visible = false; hidden++; return; }
-            }
-
-            // Keep original PBR material but add clipping + fix for iOS
+            // PBR material settings
             const mat = child.material;
             mat.side = THREE.DoubleSide;
-            mat.clippingPlanes = [clipPlane];
-            mat.clipShadows = true;
 
             // Make glass materials semi-transparent
             if (matName.includes('glass')) {
@@ -145,10 +123,10 @@
     <a-entity mindar-image-target="targetIndex: 0">
       <a-entity
         id="corridor-model"
-        gltf-model="url(./classroom.gltf?v=16)"
-        position="0 0.3 0"
-        rotation="-20 30 0"
-        scale="0.016 0.016 0.016"
+        gltf-model="url(./classroom.gltf?v=18)"
+        position="0 0.15 0"
+        rotation="-30 30 0"
+        scale="0.010 0.010 0.010"
         unity-look
         animation="property: rotation; to: -20 390 0; loop: true; dur: 30000; easing: linear;"
       ></a-entity>
