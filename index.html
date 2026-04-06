@@ -38,57 +38,71 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <script>
-    // Remove ceiling/roof + enable clipping to match Unity's open-top view
-    // Keep original PBR materials for proper dark lighting like Unity
+    // Match Unity's dark interior look with proper PBR materials
     AFRAME.registerComponent('unity-look', {
       init: function () {
         const el = this.el;
         el.addEventListener('model-loaded', () => {
           this.processModel('init');
-          setTimeout(() => this.processModel('retry'), 1000);
+          setTimeout(() => this.processModel('retry'), 1500);
         });
       },
       processModel: function (tag) {
         const mesh = this.el.getObject3D('mesh');
         if (!mesh) return;
         const THREE = AFRAME.THREE;
-        let converted = 0, textured = 0, hidden = 0;
+        let converted = 0, textured = 0, normalMapped = 0;
 
-        // Geometry already trimmed at Y=14 in conversion - no clipping planes needed
         mesh.traverse((child) => {
           if (child.isMesh && child.material) {
-            const matName = (child.material.name || '').toLowerCase();
-
-            // PBR material settings
             const mat = child.material;
+            const matName = (mat.name || '').toLowerCase();
+
             mat.side = THREE.DoubleSide;
 
-            // Make glass materials semi-transparent
+            // Glass materials
             if (matName.includes('glass')) {
               mat.transparent = true;
-              mat.opacity = 0.3;
+              mat.opacity = 0.25;
+              mat.color.setHex(0x88aaaa);
             }
 
-            // Ensure texture colorSpace is correct
+            // Diffuse texture handling
             if (mat.map) {
-              if (mat.map.colorSpace !== undefined) {
-                mat.map.colorSpace = THREE.SRGBColorSpace;
-              }
+              mat.map.colorSpace = THREE.SRGBColorSpace;
               mat.map.needsUpdate = true;
               textured++;
             }
+
+            // Normal map handling
+            if (mat.normalMap) {
+              mat.normalMap.colorSpace = THREE.NoColorSpace;
+              mat.normalScale.set(1.5, 1.5);
+              mat.normalMap.needsUpdate = true;
+              normalMapped++;
+            }
+
+            // PBR: darken to match Unity's dark indoor atmosphere
+            if (mat.color) {
+              const c = mat.color;
+              // Power curve + multiply to create Unity-like dark interior
+              c.r = Math.pow(c.r, 1.8) * 0.55;
+              c.g = Math.pow(c.g, 1.8) * 0.55;
+              c.b = Math.pow(c.b, 1.8) * 0.55;
+            }
+
+            // Matte indoor surfaces
+            mat.roughness = 0.88;
+            mat.metalness = 0.02;
+            mat.envMapIntensity = 0.15;
 
             mat.needsUpdate = true;
             converted++;
           }
         });
 
-        // Enable clipping on renderer
-        const renderer = document.querySelector('a-scene').renderer;
-        if (renderer) renderer.localClippingEnabled = true;
-
         const dbg = document.getElementById('debug');
-        if (dbg) dbg.textContent = tag + ': ' + textured + '/' + converted + ' tex, ' + hidden + ' ceil';
+        if (dbg) dbg.textContent = tag + ': ' + textured + '/' + converted + ' tex, ' + normalMapped + ' nrm';
       }
     });
   </script>
@@ -108,22 +122,22 @@
   <a-scene
     mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 1000; missTolerance: 5; warmupTolerance: 5;"
     color-space="sRGB"
-    renderer="colorManagement: true; physicallyCorrectLights: true;"
+    renderer="colorManagement: true; physicallyCorrectLights: true; toneMapping: ACESFilmic; toneMappingExposure: 0.8;"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false"
     loading-screen="enabled: false"
   >
-    <!-- Dark lighting to match Unity indoor scene -->
-    <a-entity light="type: ambient; color: #c0c5c0; intensity: 0.4;"></a-entity>
-    <a-entity light="type: directional; color: #ffffff; intensity: 0.5;" position="0 10 5"></a-entity>
-    <a-entity light="type: directional; color: #ffffff; intensity: 0.2;" position="-5 8 -3"></a-entity>
+    <!-- Dark indoor lighting to match Unity scene -->
+    <a-entity light="type: ambient; color: #707570; intensity: 0.10;"></a-entity>
+    <a-entity light="type: directional; color: #fff0e0; intensity: 0.8;" position="2 20 3"></a-entity>
+    <a-entity light="type: directional; color: #d0e0f0; intensity: 0.2;" position="-4 15 -3"></a-entity>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0">
       <a-entity
         id="corridor-model"
-        gltf-model="url(./classroom.gltf?v=18)"
+        gltf-model="url(./classroom.gltf?v=21)"
         position="0 0.15 0"
         rotation="-30 30 0"
         scale="0.010 0.010 0.010"
