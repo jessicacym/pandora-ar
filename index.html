@@ -2,22 +2,43 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>AR School Corridor v6</title>
+  <title>Pandora.Protocol - AR</title>
   <style>
-    body { margin: 0; overflow: hidden; }
-    .mindar-ui-overlay, .a-enter-vr, .a-orientation-modal,
-    [class*="debug"], [id*="debug"] { display: none !important; }
-    #ver {
-      position: fixed; bottom: 8px; right: 8px;
-      color: #fff; background: rgba(0,0,0,0.5);
-      font: bold 14px sans-serif; padding: 2px 8px;
-      border-radius: 4px; z-index: 99999;
-      pointer-events: none;
+    body { margin: 0; overflow: hidden; background: #000; }
+    #loading {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #0a0a1a; color: #00ffcc; display: flex;
+      flex-direction: column; align-items: center; justify-content: center;
+      z-index: 9999; font-family: 'Courier New', monospace;
     }
+    #loading h1 { font-size: 28px; margin-bottom: 8px; letter-spacing: 4px; }
+    #loading p { font-size: 13px; color: #00aa88; margin: 4px 0; }
+    .spinner {
+      width: 50px; height: 50px; border: 3px solid #0a2a1a;
+      border-top-color: #00ffcc; border-radius: 50%;
+      animation: spin 1s linear infinite; margin-bottom: 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #hint {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,20,15,0.85); color: #00ffcc; padding: 14px 28px;
+      border-radius: 25px; font-family: 'Courier New', monospace; font-size: 14px;
+      z-index: 100; text-align: center; pointer-events: none;
+      border: 1px solid #00aa88; transition: opacity 0.5s; opacity: 0;
+    }
+    #ver {
+      position: fixed; bottom: 10px; right: 10px; color: #00ffcc;
+      font: 10px monospace; z-index: 300; background: rgba(0,0,0,0.8);
+      padding: 3px 6px; border-radius: 3px;
+    }
+    .a-enter-vr, .a-orientation-modal, .rs-base, .a-inspector-loader, .a-loader-title {
+      display: none !important;
+    }
+    a-scene .a-canvas { position: fixed !important; }
   </style>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -25,65 +46,90 @@
     AFRAME.registerComponent('unity-look', {
       init: function () {
         this.el.addEventListener('model-loaded', () => {
-          this.el.object3D.traverse(child => {
-            if (child.isMesh && child.material) {
-              const m = child.material;
-              m.roughness = 0.6;
-              m.metalness = 0.1;
-              m.needsUpdate = true;
+          this.processModel();
+          setTimeout(() => this.processModel(), 1500);
+        });
+      },
+      processModel: function () {
+        const mesh = this.el.getObject3D('mesh');
+        if (!mesh) return;
+        const THREE = AFRAME.THREE;
+        mesh.traverse((child) => {
+          if (child.isMesh && child.material) {
+            const mat = child.material;
+            const matName = (mat.name || '').toLowerCase();
+            mat.side = THREE.DoubleSide;
+            if (matName.includes('glass')) {
+              mat.transparent = true; mat.opacity = 0.3;
+              mat.color.setHex(0xc8dde8);
             }
-          });
+            if (mat.map) { mat.map.colorSpace = THREE.SRGBColorSpace; mat.map.needsUpdate = true; }
+            if (mat.normalMap) { mat.normalMap.colorSpace = THREE.NoColorSpace; mat.normalScale.set(1.0,1.0); mat.normalMap.needsUpdate = true; }
+            mat.roughness = 0.75; mat.metalness = 0.0; mat.needsUpdate = true;
+          }
         });
       }
     });
   </script>
 </head>
 <body>
-  <div id="ver">v6</div>
+  <div id="loading">
+    <div class="spinner"></div>
+    <h1>PANDORA</h1>
+    <p>P R O T O C O L</p>
+    <p style="margin-top:15px; color:#006644;">Initializing AR...</p>
+  </div>
+  <div id="hint">Point camera at QR marker</div>
+  <div id="ver">v7</div>
+
   <a-scene
-    mindar-image="imageTargetSrc: ./targets.mind; filterMinCF: 0.0005; filterBeta: 0.01; missTolerance: 50; warmupTolerance: 5; uiScanning: no; uiLoading: no"
+    mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.0005; filterBeta: 0.01; missTolerance: 50; warmupTolerance: 3;"
     color-space="sRGB"
-    renderer="colorManagement: true; physicallyCorrectLights: false; antialias: true"
+    renderer="colorManagement: true; physicallyCorrectLights: true;"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false"
     loading-screen="enabled: false"
   >
-    <a-assets>
-      <a-asset-item id="corridor" src="./classroom.gltf?v=32"></a-asset-item>
-    </a-assets>
+    <a-entity light="type: ambient; color: #ffffff; intensity: 0.6;"></a-entity>
+    <a-entity light="type: directional; color: #ffffff; intensity: 0.8;" position="3 15 5"></a-entity>
+    <a-entity light="type: directional; color: #e8eef5; intensity: 0.4;" position="-5 10 -3"></a-entity>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0">
-
-      <a-light type="ambient" color="#ffffff" intensity="0.8"></a-light>
-      <a-light type="directional" color="#ffffff" intensity="1.0" position="0 20 10"></a-light>
-
       <a-entity
         id="corridor-model"
-        position="0 0 -0.4"
+        position="0 0 -0.3"
         rotation="55 20 0"
         scale="0.02 0.02 0.02"
       >
         <a-entity
           id="corridor-mesh"
-          gltf-model="#corridor"
+          gltf-model="url(./classroom.gltf?v=33)"
           position="-65 -7 -30"
           unity-look
-        ></a-entity>
+        >
+          <a-entity position="68.1 25 31.1">
+            <a-sphere radius="3.5" color="#E53935" material="shader: flat;"></a-sphere>
+            <a-sphere radius="1.2" color="#ffffff" position="0 0 3.2" material="shader: flat;"></a-sphere>
+            <a-cone radius-top="2.5" radius-bottom="0" height="6" color="#E53935" position="0 -5.5 0" material="shader: flat;"></a-cone>
+          </a-entity>
+        </a-entity>
       </a-entity>
-
-      <!-- Red location pin -->
-      <a-entity position="0 0.4 0.05">
-        <a-sphere radius="0.04" color="#EA4335" position="0 0.04 0"></a-sphere>
-        <a-cone
-          radius-bottom="0.025" radius-top="0"
-          height="0.05" color="#EA4335"
-          position="0 0 0" rotation="180 0 0"
-        ></a-cone>
-      </a-entity>
-
     </a-entity>
   </a-scene>
+
+  <script>
+    const scene = document.querySelector('a-scene');
+    const loading = document.getElementById('loading');
+    const hint = document.getElementById('hint');
+    scene.addEventListener('arReady', () => {
+      loading.style.display = 'none';
+      hint.style.opacity = '1';
+    });
+    const target = document.querySelector('[mindar-image-target]');
+    target.addEventListener('targetFound', () => { hint.style.opacity = '0'; });
+    target.addEventListener('targetLost', () => { hint.style.opacity = '1'; });
+  </script>
 </body>
 </html>
