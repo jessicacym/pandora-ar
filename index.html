@@ -113,7 +113,7 @@
   <div id="debug">loading...</div>
 
   <a-scene
-    mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 1000; missTolerance: 5; warmupTolerance: 5;"
+    mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 1; filterMinCF: 0.05; filterBeta: 0.5; missTolerance: 10; warmupTolerance: 3;"
     color-space="sRGB"
     renderer="colorManagement: true; physicallyCorrectLights: true;"
     vr-mode-ui="enabled: false"
@@ -130,10 +130,10 @@
     <a-entity mindar-image-target="targetIndex: 0">
       <a-entity
         id="corridor-model"
-        gltf-model="url(./classroom.gltf?v=23)"
-        position="0 0.15 0"
-        rotation="-30 30 0"
-        scale="0.010 0.010 0.010"
+        gltf-model="url(./classroom.gltf?v=24)"
+        position="0 0 0"
+        rotation="-60 25 0"
+        scale="0.007 0.007 0.007"
         unity-look
       >
         <!-- Red location pin matching Unity Mark position (68.1, 25.0, 31.1) -->
@@ -165,8 +165,53 @@
     });
 
     const target = document.querySelector('[mindar-image-target]');
-    target.addEventListener('targetFound', () => { hint.style.opacity = '0'; });
-    target.addEventListener('targetLost', () => { hint.style.opacity = '1'; });
+    let frozen = false;
+    let freezeTimer = null;
+
+    target.addEventListener('targetFound', () => {
+      hint.style.opacity = '0';
+      // After 0.8s of stable tracking, freeze the model position to stop twitching
+      if (!frozen) {
+        clearTimeout(freezeTimer);
+        freezeTimer = setTimeout(() => {
+          // Capture current world transform and lock it
+          const obj = target.object3D;
+          obj.updateMatrixWorld(true);
+          const pos = new AFRAME.THREE.Vector3();
+          const quat = new AFRAME.THREE.Quaternion();
+          const scl = new AFRAME.THREE.Vector3();
+          obj.matrixWorld.decompose(pos, quat, scl);
+
+          // Detach from MindAR tracking by reparenting to scene
+          const scene3D = scene.object3D;
+          const modelEl = document.getElementById('corridor-model');
+          const modelObj = modelEl.object3D;
+          modelObj.updateMatrixWorld(true);
+
+          // Store model's world matrix
+          const worldMat = modelObj.matrixWorld.clone();
+
+          // Move model entity to scene root
+          target.removeChild(modelEl);
+          scene.appendChild(modelEl);
+
+          // Apply the captured world transform
+          modelObj.matrix.copy(worldMat);
+          modelObj.matrix.decompose(modelObj.position, modelObj.quaternion, modelObj.scale);
+          modelObj.matrixAutoUpdate = false;
+
+          frozen = true;
+          document.getElementById('debug').textContent = 'locked';
+        }, 800);
+      }
+    });
+
+    target.addEventListener('targetLost', () => {
+      if (!frozen) {
+        hint.style.opacity = '1';
+        clearTimeout(freezeTimer);
+      }
+    });
   </script>
 
 </body>
