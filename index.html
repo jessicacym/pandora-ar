@@ -128,22 +128,26 @@
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0">
+      <!-- Wrapper: rotation + scale around center, model offset inside to center geometry -->
       <a-entity
         id="corridor-model"
-        gltf-model="url(./classroom.gltf?v=24)"
-        position="0 0 0"
-        rotation="-60 25 0"
-        scale="0.007 0.007 0.007"
-        unity-look
+        position="0 0.05 0"
+        rotation="-80 0 0"
+        scale="0.006 0.006 0.006"
       >
-        <!-- Red location pin matching Unity Mark position (68.1, 25.0, 31.1) -->
-        <a-entity position="68.1 25 31.1">
-          <!-- Pin head (red sphere) -->
-          <a-sphere radius="3.5" color="#E53935" material="shader: flat;"></a-sphere>
-          <!-- White dot center -->
-          <a-sphere radius="1.2" color="#ffffff" position="0 0 3.2" material="shader: flat;"></a-sphere>
-          <!-- Pin point (cone pointing down) -->
-          <a-cone radius-top="2.5" radius-bottom="0" height="6" color="#E53935" position="0 -5.5 0" material="shader: flat;"></a-cone>
+        <!-- Inner offset: center the geometry (model goes 0~130 X, 0~60 Z) -->
+        <a-entity
+          id="corridor-mesh"
+          gltf-model="url(./classroom.gltf?v=25)"
+          position="-65 0 -30"
+          unity-look
+        >
+          <!-- Red location pin at Unity Mark position (68.1, 25.0, 31.1) -->
+          <a-entity position="68.1 25 31.1">
+            <a-sphere radius="3.5" color="#E53935" material="shader: flat;"></a-sphere>
+            <a-sphere radius="1.2" color="#ffffff" position="0 0 3.2" material="shader: flat;"></a-sphere>
+            <a-cone radius-top="2.5" radius-bottom="0" height="6" color="#E53935" position="0 -5.5 0" material="shader: flat;"></a-cone>
+          </a-entity>
         </a-entity>
       </a-entity>
     </a-entity>
@@ -170,39 +174,29 @@
 
     target.addEventListener('targetFound', () => {
       hint.style.opacity = '0';
-      // After 0.8s of stable tracking, freeze the model position to stop twitching
+      // After 1s of stable tracking, freeze model to stop all twitching
       if (!frozen) {
         clearTimeout(freezeTimer);
         freezeTimer = setTimeout(() => {
-          // Capture current world transform and lock it
-          const obj = target.object3D;
-          obj.updateMatrixWorld(true);
-          const pos = new AFRAME.THREE.Vector3();
-          const quat = new AFRAME.THREE.Quaternion();
-          const scl = new AFRAME.THREE.Vector3();
-          obj.matrixWorld.decompose(pos, quat, scl);
-
-          // Detach from MindAR tracking by reparenting to scene
-          const scene3D = scene.object3D;
           const modelEl = document.getElementById('corridor-model');
           const modelObj = modelEl.object3D;
           modelObj.updateMatrixWorld(true);
 
-          // Store model's world matrix
+          // Capture world transform
           const worldMat = modelObj.matrixWorld.clone();
 
-          // Move model entity to scene root
+          // Reparent to scene root (detach from tracking)
           target.removeChild(modelEl);
           scene.appendChild(modelEl);
 
-          // Apply the captured world transform
+          // Apply frozen world transform
           modelObj.matrix.copy(worldMat);
           modelObj.matrix.decompose(modelObj.position, modelObj.quaternion, modelObj.scale);
           modelObj.matrixAutoUpdate = false;
 
           frozen = true;
           document.getElementById('debug').textContent = 'locked';
-        }, 800);
+        }, 1000);
       }
     });
 
